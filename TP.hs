@@ -78,7 +78,7 @@ maxCoord a b l | (coord l a > coord l b) = a
 
 -- |minCoord: Given two points and an int, returns the point with the minimum coordinate on the int-th position
 minCoord :: Punto p ⇒ p → p → Int → p
-minCoord a b l | (coord l a > coord l b) = a 
+minCoord a b l | (coord l a < coord l b) = a 
                | otherwise               = b
 
 -- |maxPointNdTree: Given an int and a NdTree, returns the point with the maximum coordinate on the int-th position in the NdTree
@@ -106,144 +106,109 @@ eliminar x (Node left p right lvl)  | (x == p) = let minD = minPointNdTree lvl r
                                     | coord lvl x <= coord lvl p = (Node (eliminar x left) p right lvl)
                                     | coord lvl x > coord lvl p  = (Node left p (eliminar x right) lvl)
                                            
--- |Rect will represent a rectangle in a 2-dimensional metric space, defined by two points
+-- |Rect will represent a rectangle in a 2-dimensional metric space, defined by two (opposed) points
 type Rect = (Punto2d, Punto2d)
 
 -- |getMinCoord: Given a Rect and an Int (which represents the axis), returns the minimum coordinate of both points using that axis
 getMinCoord :: Rect → Int → Double
 getMinCoord (a,b) l = (coord l a) `min` (coord l b)
 
--- |getMaxCoord: Given a Rect and an Int (which represents the axis), returns the minimum coordinate of both points using that axis
+-- |getMaxCoord: Given a Rect and an Int (which represents the axis), returns the maximum coordinate of both points using that axis
 getMaxCoord :: Rect → Int → Double
 getMaxCoord (a,b) l = (coord l a) `max` (coord l b)
 
--- |isInRect: Given a Point2d, a Rect and an Int, returns True if the point is inside the rectangle, or False otherwise
+-- |isInRect: Given a Point2d, a Rect and an Int, returns True if the point is STRICTLY inside the rectangle, or False otherwise
+    -- To make this non-strict, one should simply replace '>' with '>=' and '<' with '<=' 
 isInRect :: Punto2d → Rect → Int → Bool
 isInRect p (a,b) l = let nextl = (l+1) `mod` (dimension p) in 
-                        if ((coord nextl p) > (getMinCoord (a,b) nextl)) && ((coord nextl p) < (getMaxCoord (a,b) nextl))
+                        if ((coord l p) > (getMinCoord (a,b) l)) && ((coord l p) < (getMaxCoord (a,b) l)) &&
+                           ((coord nextl p) > (getMinCoord (a,b) nextl)) && ((coord nextl p) < (getMaxCoord (a,b) nextl))
                         then True else False
 
 -- |ortogonalSearch: Given a NdTree of Punto2d and a Rect, returns a list of each Punto2d that is STRICTLY inside Rect
-ortogonalSearch :: NdTree Punto2d -> Rect -> [Punto2d]
+ortogonalSearch :: NdTree Punto2d → Rect → [Punto2d]
 ortogonalSearch Empty _ = []
 ortogonalSearch (Node Empty p Empty lvl) (a,b) = if (isInRect p (a,b) lvl) then [p] else []
 ortogonalSearch (Node left p right lvl) (a,b)  | (coord lvl p) < (getMinCoord (a,b) lvl) = ortogonalSearch right (a,b)
                                                | (coord lvl p) > (getMaxCoord (a,b) lvl) = ortogonalSearch left (a,b)
                                                | otherwise = elem ++ (ortogonalSearch right (a,b)) ++ (ortogonalSearch left (a,b))
                                                     where elem = if (isInRect p (a,b) lvl) then [p] else []
-{-- 
-Node 
-    (Node 
-        Empty 
-    (P2d (2.0,3.0)) 
-        (Node 
-            Empty 
-        (P2d (2.0,4.0)) 
-            Empty 
-        0) 
-    1) 
-(P2d (5.0,4.0)) 
-    Empty 
-0
-
-Node 
-    (Node 
-        Empty 
-    (P2d (2.0,3.0)) 
-        (Node 
-            Empty 
-        (P2d (2.0,4.0)) 
-            Empty 
-        0) 
-    1) 
-(P2d (5.0,4.0)) 
-    (Node 
-        Empty 
-    (P2d (9.0,1.0)) 
-        Empty 
-    1) 
-0
---}
 
 
--- TESTS
-{-
+-- EXAMPLES
 milista  = [P2d x | x ←[(2,3), (5,4), (9,6), (4,7), (8,1), (7,2)]]
 miarbol = fromList milista
 
-milista2  = [P2d x | x ←[(2,3), (5,4)]]
-miarbol2 = fromList milista2
-
-point1 = (P2d(0.5, 0.5))
-point2 = (P2d(5.1, 6))
-
-pepetree = insertar (P2d(9,1)) (insertar (P2d(2,4)) miarbol2)
--}
-
-
-{--
-milista =  [P2d x | x ←[(2,3), (5,4), (9,6), (4,7), (8,1), (7,2)]]
-miarbol = fromList milista
+{- 
 
 miarbol:
 
 Node 
     (Node 
-        (Node 
-            Empty
-        (P2d (2.0,3.0)) 
-            Empty
-        0) 
+        (Node Empty (P2d (2.0,3.0)) Empty 0) 
+    (P2d (5.0,4.0)) 
+        (Node Empty (P2d (4.0,7.0)) Empty 0) 
+    1) 
+(P2d (7.0,2.0)) 
+    (Node 
+        (Node Empty (P2d (8.0,1.0)) Empty 0) 
+    (P2d (9.0,6.0)) 
+        Empty 
+    1) 
+0
+
+-}
+
+miarbolcon36 = insertar (P2d(3,6)) miarbol
+
+{-
+
+miarbolcon36:
+
+Node 
+    (Node 
+        (Node Empty (P2d (2.0,3.0)) Empty 0) 
     (P2d (5.0,4.0)) 
         (Node 
-            Empty 
+            (Node Empty (P2d (3.0,6.0)) Empty 1) 
         (P2d (4.0,7.0)) 
             Empty 
         0) 
     1) 
 (P2d (7.0,2.0)) 
     (Node 
-        (Node 
-            Empty 
-        (P2d (8.0,1.0)) 
-            Empty 
-        0) 
+        (Node Empty (P2d (8.0,1.0)) Empty 0) 
     (P2d (9.0,6.0)) 
         Empty 
     1) 
 0
 
+-}
 
+miarbolsin72 = eliminar (P2d(7,2)) miarbol
 
---}
+{-
 
-
-{--
-milista =  [P2d x | x ←[(2,3), (5,4), (9,6), (4,7), (8,1), (7,2)]]
-miarbol = fromList milista
-test001 = eliminar (P2d(7,2)) miarbol
-
-test001:
+miarbolsin72:
 
 Node 
     (Node 
-        (Node 
-            Empty 
-        (P2d (2.0,3.0)) 
-            Empty 
-        0) 
+        (Node Empty (P2d (2.0,3.0)) Empty 0) 
     (P2d (5.0,4.0)) 
-        (Node 
-            Empty 
-        (P2d (4.0,7.0)) 
-            Empty 
-        0) 
+        (Node Empty (P2d (4.0,7.0)) Empty 0) 
     1) 
 (P2d (8.0,1.0)) 
-    (Node 
-        Empty 
-    (P2d (9.0,6.0)) 
-        Empty 
-    1) 
+    (Node Empty (P2d (9.0,6.0)) Empty 1)
 0
---}
+
+-}
+
+rect1 = ( (P2d(7.5,0.9)) , (P2d(3,5)) )
+busq1 = ortogonalSearch miarbol rect1
+
+-- busq1: [P2d (7.0,2.0),P2d (5.0,4.0)]
+
+rect2 = ( (P2d(1.5,3.5)) , (P2d(9.5,9.5)) )
+busq2 = ortogonalSearch miarbol rect2
+
+-- busq2: [P2d (9.0,6.0),P2d (5.0,4.0),P2d (4.0,7.0)]
